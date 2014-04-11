@@ -8,4 +8,4 @@ DATABASE = {'drivername': 'postgres',
             'password': '#nourhany#',
             'database': 'scrape'}
 
-ITEM_PIPELINES = ['scraper.pipelines.faculty_pipeline']
+ITEM_PIPELINES = {'scraper.pipelines.faculty_pipeline': 300}
