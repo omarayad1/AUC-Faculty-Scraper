@@ -1,28 +1,28 @@
 from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.contrib.loader import ItemLoader
-from scrapy.contrib.loader.processor import Join, MapCompose
 from scrapy.http import FormRequest
 from scraper.items import faculty_contact
 from scraper.validation_keys import view_state, event_validation
+from scrapy.contrib.loader.processor import Join, MapCompose, TakeFirst
 
 
 class faculty_spider(Spider):
     name = "faculty"
     allowed_domains = ["dir.aucegypt.edu"]
     start_urls = ["http://dir.aucegypt.edu/index.aspx"]
-    deals_list_xpath = './/span[@id="ctl00_ContentPlaceHolder1_DataList1"]'
-    item_fields = {'name': './/span[contains(@id, "NameLabel")]/text()',
+    deals_list_xpath = '//td'
+    item_fields = {'name': './/b/span[contains(@id, "NameLabel")]/text()',
                    'department': './/span[contains(@id, "DeptLabel")]/text()',
                    'title': './/span[contains(@id, "TitleLabel")]/text()',
-                   'email': './/span[contains(@id, "mailA")]/img[@src]',
+                   'email': './/a[contains(@id, "mailA")]/img/@src',
                    'phone': './/span[contains(@id, "PhoneLabel")]/text()',
                    'building': './/span[contains(@id, "BLDGLabel")]/text()',
                    'room': './/span[contains(@id, "RMLabel")]/text()',
                    'campus': './/span[contains(@id, "CampusLabel")]/text()'}
 
     def parse(self, response):
-        yield FormRequest.from_response(
+        return FormRequest.from_response(
             response, formname='aspnetForm',
             formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
                       '__EVENTTARGET': '', 'EVENTARGUMENT': '',
@@ -44,14 +44,11 @@ class faculty_spider(Spider):
     def parse2(self, response):
         selector = Selector(response)
         for deal in selector.xpath(self.deals_list_xpath):
-            loader = ItemLoader(
-                faculty_contact(),
-                response=response
-                )
-            loader.default_input_processor = MapCompose(unicode.strip)
-            loader.default_output_processor = Join()
 
             for field, xpath in self.item_fields.iteritems():
-                print field
+                loader = ItemLoader(
+                    faculty_contact(),
+                    response=response
+                )
                 loader.add_xpath(field, xpath)
             yield loader.load_item()

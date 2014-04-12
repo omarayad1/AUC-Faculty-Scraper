@@ -16,7 +16,7 @@ def create_faculty_table(engine):
     DeclarativeBase.metadata.create_all(engine)
 
 
-class faculty(DeclarativeBase):
+class Faculty(DeclarativeBase):
     __tablename__ = "faculty"
 
     id = Column(Integer, primary_key=True)
