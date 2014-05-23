@@ -1,11 +1,11 @@
 from scrapy.spider import Spider
-from scrapy.selector import Selector
+from scrapy.selector import HtmlXPathSelector
 from scrapy.contrib.loader import ItemLoader
 from scrapy.http import FormRequest
 from scraper.items import faculty_contact
 from scraper.validation_keys import view_state, event_validation
 from scrapy.contrib.loader.processor import Join, MapCompose, TakeFirst
-
+from scraper.departments import departments
 
 class faculty_spider(Spider):
     name = "faculty"
@@ -22,33 +22,31 @@ class faculty_spider(Spider):
                    'campus': './/span[contains(@id, "CampusLabel")]/text()'}
 
     def parse(self, response):
-        return FormRequest.from_response(
-            response, formname='aspnetForm',
-            formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
-                      '__EVENTTARGET': '', 'EVENTARGUMENT': '',
-                      '__EVENTVALIDATION': event_validation,
-                      'ctl00$ContentPlaceHolder1$firstname': '',
-                      'ctl00$ContentPlaceHolder1$firstnametype':
-                      'firstcontains',
-                      'ctl00$ContentPlaceHolder1$lastname': '',
-                      'ctl00$ContentPlaceHolder1$lastnametype':
-                      'lastcontains',
-                      'ctl00$ContentPlaceHolder1$title': '',
-                      'ctl00$ContentPlaceHolder1$email': '',
-                      'ctl00$ContentPlaceHolder1$department':
-                      'Printshop',
-                      'ctl00$ContentPlaceHolder1$Button1':
-                      'Search'}, callback=self.parse2
-        )
+        for department in departments:
+            yield FormRequest.from_response(
+                response, formname='aspnetForm',
+                formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
+                          '__EVENTTARGET': '', 'EVENTARGUMENT': '',
+                          '__EVENTVALIDATION': event_validation,
+                          'ctl00$ContentPlaceHolder1$firstname': '',
+                          'ctl00$ContentPlaceHolder1$firstnametype':
+                          'firstcontains',
+                          'ctl00$ContentPlaceHolder1$lastname': '',
+                          'ctl00$ContentPlaceHolder1$lastnametype':
+                          'lastcontains',
+                          'ctl00$ContentPlaceHolder1$title': '',
+                          'ctl00$ContentPlaceHolder1$email': '',
+                          'ctl00$ContentPlaceHolder1$department':
+                          department,
+                          'ctl00$ContentPlaceHolder1$Button1':
+                          'Search'}, callback=self.parse2
+            )
 
     def parse2(self, response):
-        selector = Selector(response)
-        for deal in selector.xpath(self.deals_list_xpath):
-
+        hxs = HtmlXPathSelector(response)
+        items = hxs.select(self.deals_list_xpath)
+        for item in items:
+            loader = ItemLoader(faculty_contact(), selector=item)
             for field, xpath in self.item_fields.iteritems():
-                loader = ItemLoader(
-                    faculty_contact(),
-                    response=response
-                )
                 loader.add_xpath(field, xpath)
             yield loader.load_item()
