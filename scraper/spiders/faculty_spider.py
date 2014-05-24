@@ -23,8 +23,8 @@ class faculty_spider(Spider):
 
     def parse(self, response):
         for department in departments:
-            yield FormRequest.from_response(
-                response, formname='aspnetForm',
+            yield FormRequest(
+                self.start_urls[0],
                 formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
                           '__EVENTTARGET': '', 'EVENTARGUMENT': '',
                           '__EVENTVALIDATION': event_validation,
@@ -39,7 +39,7 @@ class faculty_spider(Spider):
                           'ctl00$ContentPlaceHolder1$department':
                           department,
                           'ctl00$ContentPlaceHolder1$Button1':
-                          'Search'}, callback=self.parse2
+                          'Search'}, callback=self.parse2, dont_filter=True
             )
 
     def parse2(self, response):
