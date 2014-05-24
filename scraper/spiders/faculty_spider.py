@@ -6,6 +6,9 @@ from scraper.items import faculty_contact
 from scraper.validation_keys import view_state, event_validation
 from scrapy.contrib.loader.processor import Join, MapCompose, TakeFirst
 from scraper.departments import departments
+import httplib
+import urllib
+import HTMLParser
 
 class faculty_spider(Spider):
     name = "faculty"
@@ -15,7 +18,7 @@ class faculty_spider(Spider):
     item_fields = {'name': './/b/span[contains(@id, "NameLabel")]/text()',
                    'department': './/span[contains(@id, "DeptLabel")]/text()',
                    'title': './/span[contains(@id, "TitleLabel")]/text()',
-                   'email': './/a[contains(@id, "mailA")]/img/@src',
+                   'email': './/a[contains(@id, "mailA")]/@href',
                    'phone': './/span[contains(@id, "PhoneLabel")]/text()',
                    'building': './/span[contains(@id, "BLDGLabel")]/text()',
                    'room': './/span[contains(@id, "RMLabel")]/text()',
@@ -23,6 +26,7 @@ class faculty_spider(Spider):
 
     def parse(self, response):
         for department in departments:
+            department_value_escaped = HTMLParser.HTMLParser().unescape(department)
             yield FormRequest(
                 self.start_urls[0],
                 formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
@@ -37,7 +41,7 @@ class faculty_spider(Spider):
                           'ctl00$ContentPlaceHolder1$title': '',
                           'ctl00$ContentPlaceHolder1$email': '',
                           'ctl00$ContentPlaceHolder1$department':
-                          department,
+                          department_value_escaped,
                           'ctl00$ContentPlaceHolder1$Button1':
                           'Search'}, callback=self.parse2, dont_filter=True
             )
@@ -47,6 +51,21 @@ class faculty_spider(Spider):
         items = hxs.select(self.deals_list_xpath)
         for item in items:
             loader = ItemLoader(faculty_contact(), selector=item)
+            loader.default_input_processor = MapCompose(unicode.strip)
+            loader.default_output_processor = Join()
             for field, xpath in self.item_fields.iteritems():
-                loader.add_xpath(field, xpath)
+                if field == 'email':
+                    link = item.select(self.item_fields['email'])
+                    r = httplib.HTTPConnection('dir.aucegypt.edu')
+                    try:
+                        r.request('GET', '/'+link.extract()[0])
+                        res = r.getresponse()
+                        data = res.read()
+                        email_selection = HtmlXPathSelector(text=data)
+                        email = email_selection.select('//@href')
+                        loader.add_value('email', unicode(urllib.unquote(email.extract()[0]).replace('mailto:', '')))
+                    except IndexError:
+                        loader.add_value('email', u'')
+                else:
+                    loader.add_xpath(field, xpath)
             yield loader.load_item()
