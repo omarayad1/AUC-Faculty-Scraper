@@ -1,5 +1,5 @@
 from scrapy.spider import Spider
-from scrapy.selector import HtmlXPathSelector
+from scrapy.selector import Selector
 from scrapy.contrib.loader import ItemLoader
 from scrapy.http import FormRequest
 from scraper.items import faculty_contact
@@ -28,7 +28,8 @@ class faculty_spider(Spider):
         for department in departments:
             department_value_escaped = HTMLParser.HTMLParser().unescape(department)
             yield FormRequest(
-                self.start_urls[0],
+                url=self.start_urls[0],
+                method='POST',
                 formdata={'__LASTFOCUS': '', '__VIEWSTATE': view_state,
                           '__EVENTTARGET': '', 'EVENTARGUMENT': '',
                           '__EVENTVALIDATION': event_validation,
@@ -47,22 +48,22 @@ class faculty_spider(Spider):
             )
 
     def parse2(self, response):
-        hxs = HtmlXPathSelector(response)
-        items = hxs.select(self.deals_list_xpath)
+        hxs = Selector(response)
+        items = hxs.xpath(self.deals_list_xpath)
         for item in items:
             loader = ItemLoader(faculty_contact(), selector=item)
             loader.default_input_processor = MapCompose(unicode.strip)
             loader.default_output_processor = Join()
             for field, xpath in self.item_fields.iteritems():
                 if field == 'email':
-                    link = item.select(self.item_fields['email'])
+                    link = item.xpath(self.item_fields['email'])
                     r = httplib.HTTPConnection('dir.aucegypt.edu')
                     try:
                         r.request('GET', '/'+link.extract()[0])
                         res = r.getresponse()
                         data = res.read()
-                        email_selection = HtmlXPathSelector(text=data)
-                        email = email_selection.select('//@href')
+                        email_selection = Selector(text=data)
+                        email = email_selection.xpath('//@href')
                         loader.add_value('email', unicode(urllib.unquote(email.extract()[0]).replace('mailto:', '')))
                     except IndexError:
                         loader.add_value('email', u'')

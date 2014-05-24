@@ -9,7 +9,6 @@ class faculty_pipeline(object):
         self.Session = sessionmaker(bind=engine)
 
     def process_item(self, item, spider):
-        print item
         session = self.Session()
         faculty = Faculty(**item)
         session.add(faculty)
