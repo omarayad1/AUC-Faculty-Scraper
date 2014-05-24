@@ -2,11 +2,11 @@ BOT_NAME = 'faculty'
 
 SPIDER_MODULES = ['scraper.spiders']
 DATABASE = {'drivername': 'postgres',
-            'host': 'localhost',
+            'host': 'ec2-54-243-50-213.compute-1.amazonaws.com',
             'port': '5432',
-            'username': 'root',
-            'password': '#nourhany#',
-            'database': 'scrape'}
+            'username': 'eiactalswujtqs',
+            'password': '47eSaSTSZKWrOgh_DeK6nFtzEH',
+            'database': 'd8ohn4nft64tao'}
 
 ITEM_PIPELINES = {'scraper.pipelines.faculty_pipeline': 300}
 
